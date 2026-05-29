@@ -1,12 +1,15 @@
 import { type Lang } from '../locales'
+import { type AvatarOption, AVATAR_OPTIONS } from '../avatars'
 
 interface Props {
   status: 'loading' | 'ready' | 'speaking' | 'error'
   lastText: string
   lastError: string
   lang: Lang
+  avatar: AvatarOption
   onEvent: (type: string) => void
   onLangChange: (lang: Lang) => void
+  onAvatarChange: (avatar: AvatarOption) => void
 }
 
 const EVENTS = ['level_clear', 'player_die', 'near_miss', 'jump', 'start'] as const
@@ -20,7 +23,7 @@ const STATUS_COLOR: Record<Props['status'], string> = {
 
 const LANGS: Lang[] = ['en', 'ko']
 
-export default function DebugPanel({ status, lastText, lastError, lang, onEvent, onLangChange }: Props) {
+export default function DebugPanel({ status, lastText, lastError, lang, avatar, onEvent, onLangChange, onAvatarChange }: Props) {
   return (
     <div style={{
       position: 'fixed', top: 16, left: 16,
@@ -76,6 +79,29 @@ export default function DebugPanel({ status, lastText, lastError, lang, onEvent,
           </button>
         ))}
       </div>
+
+      <hr style={{ border: 'none', borderTop: '1px solid #333', margin: '8px 0' }} />
+
+      {/* 아바타 선택 */}
+      <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 6 }}>Avatar</div>
+      <select
+        value={avatar.id}
+        onChange={e => {
+          const found = AVATAR_OPTIONS.find(a => a.id === e.target.value)
+          if (found) onAvatarChange(found)
+        }}
+        style={{
+          width: '100%', background: '#1e293b', color: '#e2e8f0',
+          border: '1px solid #334155', borderRadius: 6,
+          padding: '4px 8px', fontSize: 11, marginBottom: 10, cursor: 'pointer',
+        }}
+      >
+        {AVATAR_OPTIONS.map(a => (
+          <option key={a.id} value={a.id}>
+            {a.label} {a.note ? `(${a.note})` : ''}
+          </option>
+        ))}
+      </select>
 
       <hr style={{ border: 'none', borderTop: '1px solid #333', margin: '8px 0' }} />
 

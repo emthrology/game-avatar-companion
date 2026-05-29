@@ -29,3 +29,4 @@ export const LIPSYNC_MODULE: Record<Lang, string | null> = {
   ko: null,
   en: 'en',
 }
+

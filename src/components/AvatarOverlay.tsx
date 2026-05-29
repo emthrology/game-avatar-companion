@@ -1,8 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { useGameEvents } from '../hooks/useGameEvents'
 import { type Lang, TTS_CONFIG, LIPSYNC_MODULE } from '../locales'
-
-const AVATAR_URL = '/avatars/companion.glb'
+import { type AvatarOption } from '../avatars'
 const GOOGLE_TTS_API_KEY = import.meta.env.VITE_GOOGLE_TTS_API_KEY as string
 
 export type AvatarStatus = 'loading' | 'ready' | 'speaking' | 'error'
@@ -71,12 +70,13 @@ async function googleTTS(text: string, lang: Lang): Promise<SpeakAudioPayload> {
 
 interface Props {
   lang: Lang
+  avatar: AvatarOption
   onStatus: (s: AvatarStatus) => void
   onSpeak: (text: string) => void
   onError: (msg: string) => void
 }
 
-export default function AvatarOverlay({ lang, onStatus, onSpeak, onError }: Props) {
+export default function AvatarOverlay({ lang, avatar, onStatus, onSpeak, onError }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const headRef = useRef<any>(null)
@@ -100,7 +100,7 @@ export default function AvatarOverlay({ lang, onStatus, onSpeak, onError }: Prop
       })
 
       await head.showAvatar({
-        url: AVATAR_URL,
+        url: avatar.url,
         body: 'F',
         avatarMood: 'neutral',
         ttsLang: TTS_CONFIG[lang].languageCode,
@@ -116,7 +116,7 @@ export default function AvatarOverlay({ lang, onStatus, onSpeak, onError }: Prop
       onError(String(err))
     })
     return () => { cancelled = true }
-  }, [lang, onStatus, onError])
+  }, [lang, avatar, onStatus, onError])
 
   const speak = useCallback(async (text: string) => {
     const head = headRef.current
