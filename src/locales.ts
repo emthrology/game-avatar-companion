@@ -2,20 +2,59 @@ export type Lang = 'ko' | 'en'
 
 export type GameEventType = 'player_die' | 'level_clear' | 'near_miss' | 'jump' | 'start'
 
-export const REACTIONS: Record<Lang, Record<GameEventType, string[]>> = {
+export interface Reaction {
+  text: string   // 화면 표시 + TTS 입력
+  roman?: string // ko 전용: fi lipsync 모듈에 전달할 로마자 발음 표기
+}
+
+export const REACTIONS: Record<Lang, Record<GameEventType, Reaction[]>> = {
   ko: {
-    player_die:  ['아이고~!', '다시 해봐요!', '괜찮아요, 할 수 있어요!'],
-    level_clear: ['우와! 대단해요!', '클리어! 최고예요!', '완벽해요!'],
-    near_miss:   ['위험했다!', '아슬아슬~!'],
-    jump:        ['점프!', '날아올라요!'],
-    start:       ['시작해볼까요?', '파이팅!'],
+    player_die:  [
+      { text: '아이고~!',              roman: 'aigo' },
+      { text: '다시 해봐요!',           roman: 'dasi haebwayo' },
+      { text: '괜찮아요, 할 수 있어요!', roman: 'gwaenchanayo hal su isseoyo' },
+    ],
+    level_clear: [
+      { text: '우와! 대단해요!',  roman: 'uwa daedanhaeyo' },
+      { text: '클리어! 최고예요!', roman: 'keullieeo choegoyeyo' },
+      { text: '완벽해요!',        roman: 'wanbyeokhaeyo' },
+    ],
+    near_miss: [
+      { text: '위험했다!',  roman: 'wiheomhaetda' },
+      { text: '아슬아슬~!', roman: 'aseulaseul' },
+    ],
+    jump: [
+      { text: '점프!',      roman: 'jeompeu' },
+      { text: '날아올라요!', roman: 'naraollayo' },
+    ],
+    start: [
+      { text: '시작해볼까요?', roman: 'sijakhaebollkkayo' },
+      { text: '파이팅!',      roman: 'paiting' },
+    ],
   },
   en: {
-    player_die:  ['Oh no!', 'Try again, you got this!', "Don't give up!"],
-    level_clear: ['Amazing! You cleared it!', 'Woohoo! Perfect run!', 'Incredible!'],
-    near_miss:   ['That was close!', 'Whoa, barely made it!'],
-    jump:        ['Jump!', 'Nice jump!'],
-    start:       ["Let's go!", 'Good luck!'],
+    player_die:  [
+      { text: 'Oh no!' },
+      { text: 'Try again, you got this!' },
+      { text: "Don't give up!" },
+    ],
+    level_clear: [
+      { text: 'Amazing! You cleared it!' },
+      { text: 'Woohoo! Perfect run!' },
+      { text: 'Incredible!' },
+    ],
+    near_miss: [
+      { text: 'That was close!' },
+      { text: 'Whoa, barely made it!' },
+    ],
+    jump:  [
+      { text: 'Jump!' },
+      { text: 'Nice jump!' },
+    ],
+    start: [
+      { text: "Let's go!" },
+      { text: 'Good luck!' },
+    ],
   },
 }
 
@@ -24,9 +63,8 @@ export const TTS_CONFIG: Record<Lang, { languageCode: string; name: string }> = 
   en: { languageCode: 'en-US', name: 'en-US-Wavenet-F' },
 }
 
-// en만 TalkingHead lipsync 모듈 존재
+// ko → fi(핀란드어) 모듈로 로마자 발음 기반 lipsync
 export const LIPSYNC_MODULE: Record<Lang, string | null> = {
-  ko: null,
+  ko: 'fi',
   en: 'en',
 }
-

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { useGameEvents } from '../hooks/useGameEvents'
-import { type Lang, TTS_CONFIG, LIPSYNC_MODULE } from '../locales'
+import { type Lang, type Reaction, TTS_CONFIG, LIPSYNC_MODULE } from '../locales'
 import { type AvatarOption } from '../avatars'
+
 const GOOGLE_TTS_API_KEY = import.meta.env.VITE_GOOGLE_TTS_API_KEY as string
 
 export type AvatarStatus = 'loading' | 'ready' | 'speaking' | 'error'
@@ -22,7 +23,7 @@ function getAudioContext(): AudioContext {
   return sharedAudioCtx
 }
 
-async function googleTTS(text: string, lang: Lang): Promise<SpeakAudioPayload> {
+async function googleTTS(reaction: Reaction, lang: Lang): Promise<SpeakAudioPayload> {
   const voice = TTS_CONFIG[lang]
   const res = await fetch(
     `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
@@ -30,7 +31,7 @@ async function googleTTS(text: string, lang: Lang): Promise<SpeakAudioPayload> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        input: { text },
+        input: { text: reaction.text },
         voice,
         audioConfig: { audioEncoding: 'MP3' },
       }),
@@ -52,9 +53,12 @@ async function googleTTS(text: string, lang: Lang): Promise<SpeakAudioPayload> {
   if (audioCtx.state === 'suspended') await audioCtx.resume()
   const audio = await audioCtx.decodeAudioData(bytes.buffer.slice(0))
 
-  // lipsync 모듈이 있는 언어(en)만 단어 타이밍 계산, 없으면 진폭 기반
-  if (LIPSYNC_MODULE[lang]) {
-    const words = text.split(/\s+/).filter(Boolean)
+  const lipsyncModule = LIPSYNC_MODULE[lang]
+  if (lipsyncModule) {
+    // ko: roman 발음 표기로 words 계산 → fi 모듈이 로마자 파싱
+    // en: text 그대로 words 계산
+    const wordSource = reaction.roman ?? reaction.text
+    const words = wordSource.split(/\s+/).filter(Boolean)
     const totalMs = audio.duration * 1000
     const perWord = totalMs / Math.max(words.length, 1)
     return {
@@ -72,7 +76,7 @@ interface Props {
   lang: Lang
   avatar: AvatarOption
   onStatus: (s: AvatarStatus) => void
-  onSpeak: (text: string) => void
+  onSpeak: (reaction: Reaction) => void
   onError: (msg: string) => void
 }
 
@@ -118,14 +122,14 @@ export default function AvatarOverlay({ lang, avatar, onStatus, onSpeak, onError
     return () => { cancelled = true }
   }, [lang, avatar, onStatus, onError])
 
-  const speak = useCallback(async (text: string) => {
+  const speak = useCallback(async (reaction: Reaction) => {
     const head = headRef.current
     if (!head) return
 
-    onSpeak(text)
+    onSpeak(reaction)
     onStatus('speaking')
     try {
-      const payload = await googleTTS(text, lang)
+      const payload = await googleTTS(reaction, lang)
       const lipsyncLang = LIPSYNC_MODULE[lang]
       head.speakAudio(payload, lipsyncLang ? { lipsyncLang } : {})
       setTimeout(() => onStatus('ready'), payload.audio.duration * 1000 + 500)
@@ -141,7 +145,7 @@ export default function AvatarOverlay({ lang, avatar, onStatus, onSpeak, onError
     if (!ready) return
     const handler = (e: Event) => {
       const text = (e as CustomEvent<{ text: string }>).detail.text
-      speak(text)
+      speak({ text })
     }
     window.addEventListener('avatar:speak', handler)
     return () => window.removeEventListener('avatar:speak', handler)

@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import AvatarOverlay, { AvatarStatus } from './components/AvatarOverlay'
 import DebugPanel from './components/DebugPanel'
-import { type Lang } from './locales'
+import { type Lang, type Reaction } from './locales'
 import { type AvatarOption, DEFAULT_AVATAR } from './avatars'
 
 export default function App() {
@@ -30,7 +30,7 @@ export default function App() {
   }, [])
 
   const handleStatus = useCallback((s: AvatarStatus) => setStatus(s), [])
-  const handleSpeak = useCallback((t: string) => { setLastText(t); setLastError('') }, [])
+  const handleSpeak = useCallback((r: Reaction) => { setLastText(r.text); setLastError('') }, [])
   const handleError = useCallback((e: string) => setLastError(e), [])
 
   return (
