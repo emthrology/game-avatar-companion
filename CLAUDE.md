@@ -37,15 +37,19 @@ React 오버레이 (position: fixed 또는 absolute)
 game-avatar-companion/
 ├── public/
 │   └── avatars/
-│       └── companion.glb        # brunette.glb (TalkingHead 공식 예제, 폴백용)
+│       ├── vroid-custom.glb     # 커스텀 VRoid (my_avatar.vrm → 변환)
+│       ├── avatar-sample-m.glb  # AvatarSample_M.vrm → 변환
+│       ├── sample-b.glb         # sample_b.vrm → 변환
+│       ├── sample-c.glb         # sample_c.vrm → 변환
+│       └── sample-d.glb         # sample_d.vrm → 변환
 ├── src/
 │   ├── components/
-│   │   ├── AvatarOverlay.tsx    # TalkingHead 래핑 + Google TTS 연동, 언어/아바타별 분기
+│   │   ├── AvatarOverlay.tsx    # TalkingHead 래핑 + Google TTS 연동, 광원 설정 포함
 │   │   └── DebugPanel.tsx       # 개발용 상태 UI (상태/대사/에러/이벤트/언어/아바타 선택)
 │   ├── hooks/
 │   │   └── useGameEvents.ts     # game:event CustomEvent 수신 훅 (lang 파라미터)
 │   ├── locales.ts               # ko/en 반응 대사, TTS 음성, lipsync 모듈 설정
-│   ├── avatars.ts               # 아바타 목록 및 CDN URL 설정
+│   ├── avatars.ts               # 아바타 목록 (로컬 VRoid + CDN 아바타)
 │   ├── vite-env.d.ts            # vite/client 타입 + TalkingHead CDN 모듈 선언
 │   └── App.tsx                  # lang/avatar 상태 관리
 ├── index.html                   # importmap: three@0.180.0 CDN 매핑
@@ -83,14 +87,19 @@ LIPSYNC_MODULE = {
 
 ## 아바타 구조 (avatars.ts)
 
-아바타 목록과 CDN URL을 `avatars.ts`에서 관리.
+아바타 목록과 URL을 `avatars.ts`에서 관리. 로컬 VRoid 변환 아바타와 CDN 아바타 혼합.
 
 ```typescript
-// @1.3 태그에는 avatars/ 폴더 없음 → @main 브랜치 CDN 사용
-// mpfb.glb(36.8MB)는 jsDelivr 제한으로 403 → 목록 제외
 const CDN = 'https://cdn.jsdelivr.net/gh/met4citizen/TalkingHead@main/avatars'
 
 AVATAR_OPTIONS = [
+  // 로컬 VRoid 변환 아바타 (public/avatars/)
+  { id: 'sample-b',        url: '/avatars/sample-b.glb'        },
+  { id: 'sample-c',        url: '/avatars/sample-c.glb'        },
+  { id: 'sample-d',        url: '/avatars/sample-d.glb'        },
+  { id: 'vroid-custom',    url: '/avatars/vroid-custom.glb'    },
+  { id: 'avatar-sample-m', url: '/avatars/avatar-sample-m.glb' },
+  // CDN 아바타 (TalkingHead @main)
   { id: 'brunette',   url: `${CDN}/brunette.glb`   },  // 4.7MB  ✅
   { id: 'brunette-t', url: `${CDN}/brunette-t.glb` },  // 2.9MB  ✅
   { id: 'avaturn',    url: `${CDN}/avaturn.glb`    },  // 13.8MB ✅
@@ -125,6 +134,16 @@ const head = new TalkingHead(domNode, {
   ttsEndpoint: `https://texttospeech.googleapis.com/v1/text:synthesize?key=${KEY}`,
   lipsyncModules: ['en'],   // en만 사용. ko 없음
   cameraView: 'upper',
+  // 광원 설정 (VRoid 아바타 얼굴 가시성 개선)
+  lightAmbientColor: 0xffffff,
+  lightAmbientIntensity: 3,
+  lightDirectColor: 0xfff5e0,    // 따뜻한 흰색 (기본 0x8888aa 파란빛 대비)
+  lightDirectIntensity: 25,
+  lightSpotColor: 0xffffff,
+  lightSpotIntensity: 15,        // Head 본 타겟 스팟 (기본 꺼짐 → 활성화)
+  lightSpotPhi: 0.5,
+  lightSpotTheta: 3.14,
+  lightSpotDispersion: 0.8,
 });
 
 // 아바타 로드
@@ -181,10 +200,33 @@ type GameEventType = 'player_die' | 'level_clear' | 'near_miss' | 'jump' | 'star
 - [x] DebugPanel 아바타 선택 드롭다운 추가
 - [x] 아바타 CDN @1.3 → @main 수정 (404 버그 해결)
 - [x] ko lipsync: roman 발음 표기 도입 → fi 모듈 기반 입 움직임 적용
+- [x] VRoid → TalkingHead 자동 변환 파이프라인 구축 (avatar-pipeline/scripts/vroid_to_glb.py)
+- [x] 커스텀 아바타 변환 — sample-b, sample-c, sample-d, vroid-custom, avatar-sample-m (총 5종)
+- [x] TalkingHead 광원 조정 — 스팟 라이트(Head 본 타겟) 활성화, 방향성 광원 따뜻한 색으로 변경
+- [x] VRoid MToon→PBR 보정 — Roughness=0.6 (Blender 변환 시 적용)
 - [ ] Google TTS API 키 리퍼러 제한 해제 확인
 - [ ] TTS + 립싱크 동작 최종 확인 (en 기준)
-- [ ] 커스텀 아바타 교체 (Avaturn 무료 플랜)
 - [ ] 실제 게임 iframe 위 오버레이 연동
+
+## VRoid → GLB 변환 파이프라인
+
+`avatar-pipeline/scripts/vroid_to_glb.py` — Blender 헤드리스 자동 변환 스크립트
+
+```bash
+/Applications/Blender.app/Contents/MacOS/Blender \
+  --background --python avatar-pipeline/scripts/vroid_to_glb.py \
+  -- input.vrm public/avatars/output.glb
+```
+
+**처리 순서:** VRM import → Colliders 삭제 → 본 이름 변환(VRoid→Mixamo) → Root 본 제거 →
+눈 움직임 shape key 생성 → ARKit 52 + Oculus viseme 15 생성 →
+**양측성 키 추가(eyesClosed/eyesLookDown/eyesLookUp/mouthSmile/mouthOpen)** →
+bone axes 수정(T-pose) → Metallic=0 → GLB export
+
+**VRoid export 주의:** 파일 크기 9MB 이하가 목표. VRoid Studio에서 **폴리곤 감소(Reduce Polygons)** 옵션 활성화 필수.
+15MB 이상이면 Three.js 렌더링 프레임 드랍 발생.
+
+**양측성 키:** TalkingHead가 애니메이션 구동에 필수로 사용. 없으면 eyeBlinkLeft.limit TypeError 발생.
 
 ## 주의사항 / 트러블슈팅
 
@@ -200,13 +242,13 @@ type GameEventType = 'player_die' | 'level_clear' | 'near_miss' | 'jump' | 'star
 
 ## 호환 아바타 소스
 
-| 소스 | 무료 | ARKit blendshape | CDN 직접 참조 |
-|------|------|-----------------|-------------|
-| TalkingHead @main | ✅ | ✅ | ✅ |
-| Avaturn | ✅ (무료 플랜) | ✅ | ❌ (직접 호스팅 필요) |
-| AvatarSDK | 일부 무료 | ✅ 51개 | ❌ |
-| VRoid Hub | ✅ | ❌ (수동 추가 필요) | ❌ |
-| Ready Player Me | 종료 | — | — |
+| 소스 | 무료 | ARKit blendshape | 비고 |
+|------|------|-----------------|------|
+| TalkingHead @main CDN | ✅ | ✅ | CDN 직접 참조 가능 |
+| **VRoid Studio** | ✅ | ✅ (변환 파이프라인으로) | **현재 주력 소스** |
+| Avaturn T2 | ❌ (유료) | ✅ | 무료 플랜은 T1만 (ARKit 없음) |
+| AvatarSDK | 일부 무료 | ✅ 51개 | 직접 호스팅 필요 |
+| Ready Player Me | 종료 | — | 2026-01 Netflix 인수 후 종료 |
 
 ## 환경변수
 
