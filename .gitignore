@@ -3,3 +3,9 @@ dist
 .env
 .env.local
 .vercel
+.DS_Store
+tsconfig.tsbuildinfo
+.claude/
+docs/
+public/avatars/Male_Adult_01.glb
+public/avatars/ab_*.glb
