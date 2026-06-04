@@ -10,6 +10,11 @@ export interface AvatarOption {
 const CDN = 'https://cdn.jsdelivr.net/gh/met4citizen/TalkingHead@main/avatars'
 
 export const AVATAR_OPTIONS: AvatarOption[] = [
+  { id: 'sample-b',        label: 'Sample B',      url: '/avatars/sample-b.glb',        note: '12MB'   },
+  { id: 'sample-c',        label: 'Sample C',      url: '/avatars/sample-c.glb',        note: '12MB'   },
+  { id: 'sample-d',        label: 'Sample D',      url: '/avatars/sample-d.glb',        note: '12MB'   },
+  { id: 'vroid-custom',    label: 'My VRoid',      url: '/avatars/vroid-custom.glb',    note: 'custom' },
+  { id: 'avatar-sample-m', label: 'AvatarSample M', url: '/avatars/avatar-sample-m.glb', note: '9.3MB'  },
   { id: 'brunette',   label: 'Brunette',   url: `${CDN}/brunette.glb`,   note: '4.7MB' },
   { id: 'brunette-t', label: 'Brunette T', url: `${CDN}/brunette-t.glb`, note: '2.9MB' },
   { id: 'avaturn',    label: 'Avaturn',    url: `${CDN}/avaturn.glb`,    note: '13.8MB' },
