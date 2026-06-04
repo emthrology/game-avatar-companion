@@ -119,6 +119,54 @@ export default function AvatarOverlay({ lang, avatar, onStatus, onSpeak, onError
         ttsLang: TTS_CONFIG[lang].languageCode,
       })
 
+      if (avatar.url.startsWith('/avatars/')) {
+        const THREE = await import('three')
+
+        // 2단계 그라디언트: shadow를 밝게 유지 → 인위적 명암 경계 최소화
+        const gradData = new Uint8Array([160, 255])
+        const gradientMap = new THREE.DataTexture(gradData, 2, 1, THREE.RedFormat)
+        gradientMap.minFilter = THREE.NearestFilter
+        gradientMap.magFilter = THREE.NearestFilter
+        gradientMap.needsUpdate = true
+
+        ;(head as any).renderer.toneMappingExposure = 0.65
+        ;(head as any).scene.environmentIntensity = 0.0
+        ;(head as any).setLighting({
+          lightAmbientIntensity: 2.5,
+          lightDirectColor: 0xffffff,
+          lightDirectIntensity: 3,
+          lightDirectPhi: 0.3,
+          lightDirectTheta: 3.14,
+          lightSpotIntensity: 0,
+        })
+
+        const replaceMat = (mat: any): any => {
+          if (!mat?.isMeshStandardMaterial) return mat
+          const toon = new THREE.MeshToonMaterial({
+            map:         mat.map,
+            color:       mat.color.clone(),
+            gradientMap,
+            alphaMap:    mat.alphaMap,
+            transparent: mat.transparent,
+            opacity:     mat.opacity,
+            alphaTest:   mat.alphaTest,
+            side:        mat.side,
+            depthWrite:  mat.depthWrite,
+          })
+          mat.dispose()
+          return toon
+        }
+
+        ;(head as any).scene.traverse((obj: any) => {
+          if (!obj.isMesh) return
+          if (Array.isArray(obj.material)) {
+            obj.material = obj.material.map(replaceMat)
+          } else {
+            obj.material = replaceMat(obj.material)
+          }
+        })
+      }
+
       headRef.current = head
       setReady(true)
       onStatus('ready')
