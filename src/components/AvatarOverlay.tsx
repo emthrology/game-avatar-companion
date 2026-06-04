@@ -101,6 +101,15 @@ export default function AvatarOverlay({ lang, avatar, onStatus, onSpeak, onError
         ttsEndpoint: `https://texttospeech.googleapis.com/v1/text:synthesize?key=${GOOGLE_TTS_API_KEY}`,
         ...(lipsyncModule ? { lipsyncModules: [lipsyncModule] } : {}),
         cameraView: 'upper',
+        lightAmbientColor: 0xffffff,
+        lightAmbientIntensity: 3,
+        lightDirectColor: 0xfff5e0,  // 따뜻한 흰색 (기본 파란빛 회색 0x8888aa 대비)
+        lightDirectIntensity: 25,
+        lightSpotColor: 0xffffff,
+        lightSpotIntensity: 15,      // Head 본 타겟 스팟 활성화
+        lightSpotPhi: 0.5,           // 정면 위쪽에서 비춤
+        lightSpotTheta: 3.14,        // 카메라 방향 (정면)
+        lightSpotDispersion: 0.8,
       })
 
       await head.showAvatar({
