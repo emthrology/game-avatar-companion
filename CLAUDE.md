@@ -134,13 +134,13 @@ const head = new TalkingHead(domNode, {
   ttsEndpoint: `https://texttospeech.googleapis.com/v1/text:synthesize?key=${KEY}`,
   lipsyncModules: ['en'],   // en만 사용. ko 없음
   cameraView: 'upper',
-  // 광원 설정 (VRoid 아바타 얼굴 가시성 개선)
+  // 기본 광원 (CDN 아바타 기준)
   lightAmbientColor: 0xffffff,
   lightAmbientIntensity: 3,
-  lightDirectColor: 0xfff5e0,    // 따뜻한 흰색 (기본 0x8888aa 파란빛 대비)
+  lightDirectColor: 0xfff5e0,
   lightDirectIntensity: 25,
   lightSpotColor: 0xffffff,
-  lightSpotIntensity: 15,        // Head 본 타겟 스팟 (기본 꺼짐 → 활성화)
+  lightSpotIntensity: 15,
   lightSpotPhi: 0.5,
   lightSpotTheta: 3.14,
   lightSpotDispersion: 0.8,
@@ -148,6 +148,46 @@ const head = new TalkingHead(domNode, {
 
 // 아바타 로드
 await head.showAvatar({ url: avatarOption.url, body: 'F', avatarMood: 'neutral' });
+
+// ── VRoid 아바타 전용: MeshToonMaterial + 툰 조명 ─────────────────────────────
+// 로컬 아바타(/avatars/)에만 적용. CDN 아바타는 PBR 그대로 유지.
+// head.renderer, head.scene, head.setLighting() 모두 public API.
+if (avatarOption.url.startsWith('/avatars/')) {
+  // 2단계 그라디언트: shadow(160) 밝게 유지 → 인위적 명암 경계 최소화
+  const gradData = new Uint8Array([160, 255]);
+  const gradientMap = new THREE.DataTexture(gradData, 2, 1, THREE.RedFormat);
+  gradientMap.minFilter = gradientMap.magFilter = THREE.NearestFilter;
+  gradientMap.needsUpdate = true;
+
+  head.renderer.toneMappingExposure = 0.65;   // 전체 톤다운
+  head.scene.environmentIntensity = 0.0;       // PBR ambient 제거
+  head.setLighting({
+    lightAmbientIntensity: 2.5,
+    lightDirectColor: 0xffffff,
+    lightDirectIntensity: 3,
+    lightDirectPhi: 0.3,     // 수평에 가깝게 (top-shadow 제거)
+    lightDirectTheta: 3.14,  // 카메라 정면 방향
+    lightSpotIntensity: 0,   // 스팟 끔
+  });
+
+  head.scene.traverse(obj => {
+    if (!obj.isMesh) return;
+    const replaceMat = mat => {
+      if (!mat?.isMeshStandardMaterial) return mat;
+      const toon = new THREE.MeshToonMaterial({
+        map: mat.map, color: mat.color.clone(), gradientMap,
+        alphaMap: mat.alphaMap, transparent: mat.transparent,
+        opacity: mat.opacity, alphaTest: mat.alphaTest,
+        side: mat.side, depthWrite: mat.depthWrite,
+      });
+      mat.dispose();
+      return toon;
+    };
+    obj.material = Array.isArray(obj.material)
+      ? obj.material.map(replaceMat)
+      : replaceMat(obj.material);
+  });
+}
 
 // 영어: 단어 타이밍 기반 립싱크
 head.speakAudio({ audio: AudioBuffer, words, wtimes, wdurations }, { lipsyncLang: 'en' });
@@ -202,8 +242,8 @@ type GameEventType = 'player_die' | 'level_clear' | 'near_miss' | 'jump' | 'star
 - [x] ko lipsync: roman 발음 표기 도입 → fi 모듈 기반 입 움직임 적용
 - [x] VRoid → TalkingHead 자동 변환 파이프라인 구축 (avatar-pipeline/scripts/vroid_to_glb.py)
 - [x] 커스텀 아바타 변환 — sample-b, sample-c, sample-d, vroid-custom, avatar-sample-m (총 5종)
-- [x] TalkingHead 광원 조정 — 스팟 라이트(Head 본 타겟) 활성화, 방향성 광원 따뜻한 색으로 변경
-- [x] VRoid MToon→PBR 보정 — Roughness=0.6 (Blender 변환 시 적용)
+- [x] VRoid 툰 렌더링 — MeshToonMaterial + 2단계 그라디언트 + 정면 조명 + exposure 0.65
+- [x] Shade Smooth — Blender 변환 시 적용, 폴리곤 경계선 제거
 - [ ] Google TTS API 키 리퍼러 제한 해제 확인
 - [ ] TTS + 립싱크 동작 최종 확인 (en 기준)
 - [ ] 실제 게임 iframe 위 오버레이 연동
