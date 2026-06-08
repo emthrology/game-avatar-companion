@@ -10,6 +10,7 @@ export default function App() {
   const [lastError, setLastError] = useState('')
   const [lang, setLang] = useState<Lang>('en')
   const [avatar, setAvatar] = useState<AvatarOption>(DEFAULT_AVATAR)
+  const [customAvatars, setCustomAvatars] = useState<AvatarOption[]>([])
 
   const handleEvent = useCallback((type: string) => {
     window.dispatchEvent(new CustomEvent('game:event', { detail: { type } }))
@@ -23,6 +24,14 @@ export default function App() {
   }, [])
 
   const handleAvatarChange = useCallback((a: AvatarOption) => {
+    setAvatar(a)
+    setStatus('loading')
+    setLastText('')
+    setLastError('')
+  }, [])
+
+  const handleAddCustomAvatar = useCallback((a: AvatarOption) => {
+    setCustomAvatars(prev => [...prev, a])
     setAvatar(a)
     setStatus('loading')
     setLastText('')
@@ -49,9 +58,11 @@ export default function App() {
         lastError={lastError}
         lang={lang}
         avatar={avatar}
+        customAvatars={customAvatars}
         onEvent={handleEvent}
         onLangChange={handleLangChange}
         onAvatarChange={handleAvatarChange}
+        onAddCustomAvatar={handleAddCustomAvatar}
       />
 
       <AvatarOverlay

@@ -119,7 +119,7 @@ export default function AvatarOverlay({ lang, avatar, onStatus, onSpeak, onError
         ttsLang: TTS_CONFIG[lang].languageCode,
       })
 
-      if (avatar.url.startsWith('/avatars/')) {
+      if (avatar.url.startsWith('/avatars/') || avatar.url.startsWith('blob:')) {
         const THREE = await import('three')
 
         // 2단계 그라디언트: shadow를 밝게 유지 → 인위적 명암 경계 최소화

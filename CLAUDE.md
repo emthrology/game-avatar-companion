@@ -30,6 +30,7 @@ React 오버레이 (position: fixed 또는 absolute)
 | 프레임워크 | React + Vite (ESM 전용이라 Vite 필수, CRA 금지) |
 | TTS | Google Cloud Text-to-Speech REST API |
 | 배포 | Vercel (Hobby 무료 플랜) |
+| VRM 변환 서버 | Cloud Run (GCP, asia-northeast3) — avatar-pipeline/docker/ |
 
 ## 현재 프로젝트 구조
 
@@ -51,11 +52,11 @@ game-avatar-companion/
 │   ├── locales.ts               # ko/en 반응 대사, TTS 음성, lipsync 모듈 설정
 │   ├── avatars.ts               # 아바타 목록 (로컬 VRoid + CDN 아바타)
 │   ├── vite-env.d.ts            # vite/client 타입 + TalkingHead CDN 모듈 선언
-│   └── App.tsx                  # lang/avatar 상태 관리
+│   └── App.tsx                  # lang/avatar/customAvatars 상태 관리
 ├── index.html                   # importmap: three@0.180.0 CDN 매핑
 ├── vercel.json                  # SPA 라우팅 rewrite 설정
 ├── vite.config.ts
-└── .env                         # VITE_GOOGLE_TTS_API_KEY
+└── .env                         # VITE_GOOGLE_TTS_API_KEY, VITE_PIPELINE_URL
 ```
 
 ## i18n 구조 (locales.ts)
@@ -109,6 +110,8 @@ AVATAR_OPTIONS = [
 ```
 
 DebugPanel 드롭다운에서 실시간 아바타 전환 가능. 언어 또는 아바타 변경 시 `key={lang}-{avatar.id}`로 AvatarOverlay 리마운트.
+
+업로드된 커스텀 아바타는 `customAvatars` 상태(App.tsx)에 추가되어 드롭다운에 즉시 반영됨.
 
 ## TalkingHead lipsync 언어별 동작 방식
 
@@ -244,6 +247,10 @@ type GameEventType = 'player_die' | 'level_clear' | 'near_miss' | 'jump' | 'star
 - [x] 커스텀 아바타 변환 — sample-b, sample-c, sample-d, vroid-custom, avatar-sample-m (총 5종)
 - [x] VRoid 툰 렌더링 — MeshToonMaterial + 2단계 그라디언트 + 정면 조명 + exposure 0.65
 - [x] Shade Smooth — Blender 변환 시 적용, 폴리곤 경계선 제거
+- [x] VRM 업로드 파이프라인 (B방식) — Cloud Run + Docker + Flask API
+- [x] DebugPanel VRM 업로드 UI + 툴팁 추가
+- [x] 업로드 아바타 드롭다운 반영 (customAvatars 상태)
+- [x] MeshToonMaterial blob URL 아바타에도 적용
 - [ ] Google TTS API 키 리퍼러 제한 해제 확인
 - [ ] TTS + 립싱크 동작 최종 확인 (en 기준)
 - [ ] 실제 게임 iframe 위 오버레이 연동
@@ -295,6 +302,8 @@ bone axes 수정(T-pose) → Metallic=0 → GLB export
 ```
 VITE_GOOGLE_TTS_API_KEY=...   # Google Cloud TTS API 키
                                # API 키 HTTP 리퍼러 제한 없어야 브라우저에서 직접 호출 가능
+VITE_PIPELINE_URL=https://vrm-pipeline-207977842701.asia-northeast3.run.app
+                               # VRM → GLB 변환 Cloud Run 엔드포인트
 ```
 
 ## 배포
